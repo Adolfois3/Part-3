@@ -32,8 +32,12 @@ let persons =
       "number": "39-23-6423245"
     }
 ]
+
+
+app.use(express.static('dist'))
 app.use(express.json())
 app.use(cors())
+
 
 
 morgan.token('body', (request, response)=> JSON.stringify(request.body))
@@ -50,6 +54,10 @@ app.get('/info', (request, response)=>{
     }
     response.send(`<h2>${info.message}</h2> <br/> <p>${info.date}</p> `)
 }) 
+
+app.get('/gestor', (request, response)=>{
+    response.sendFile(__dirname + '/dist/index.html')
+})
 
 
 app.get('/api/persons', (request, response)=>{
@@ -112,7 +120,7 @@ app.delete('/api/persons/:id', (request, response)=>{
 
 
 
-const PORT = 3005
+const PORT = process.env.PORT || 3005
 
 app.listen(PORT, ()=>{
     console.log(`server running on port ${PORT}`)
