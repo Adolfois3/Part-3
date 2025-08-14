@@ -1,37 +1,14 @@
+require("dotenv").config()
+
 const express = require("express")
 const app = express()
 const morgan = require("morgan")
 const cors = require('cors')
 
+const perso = require('./mongo')
 
-let persons =
-[
-    { 
-    "id": 1,
-    "name": "Arto Hellas", 
-    "number": "040-123456"
-    },
-    { 
-      "id": 2,
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": 3,
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": 4,
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    },
-        { 
-      "id": 5,
-      "name": "Maria Hernandez", 
-      "number": "39-23-6423245"
-    }
-]
+
+let persons = []
 
 
 app.use(express.static('dist'))
@@ -44,6 +21,8 @@ morgan.token('body', (request, response)=> JSON.stringify(request.body))
 
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
+
+
 app.get('/info', (request, response)=>{
     const now = new Date()
     const dateFormatted = now.toUTCString()
@@ -55,22 +34,17 @@ app.get('/info', (request, response)=>{
     response.send(`<h2>${info.message}</h2> <br/> <p>${info.date}</p> `)
 }) 
 
+
 app.get('/gestor', (request, response)=>{
     response.sendFile(__dirname + '/dist/index.html')
 })
 
 
 app.get('/api/persons', (request, response)=>{
-    response.json(persons)
+    perso.find({}).then(persos =>{
+        response.json(persos)
+    })
 })
-
-
-const generateID = ()=>{
-    const maxId = 
-    persons.length > 0 ? Math.max(...persons.map((n)=> Number(n.id))) : 0
-    return String(maxId + 1)
-}
-
 
 app.post('/api/persons', (request, response)=>{
     const body = request.body
@@ -86,41 +60,72 @@ app.post('/api/persons', (request, response)=>{
         })
     }
 
-    const objectPerson = {
-        name: body.name,
-        number: body.number,
-        id:generateID(),
-        
-    }
+    const personn = new perso({
+        name:body.name,
+        number:body.number
+    })
 
-    persons = persons.concat(objectPerson)
-
-    response.json(objectPerson)
+    personn.save().then(savedPerso =>{
+        response.json(savedPerso)
+    })
 })
 
-app.get('/api/persons/:id', (request, response)=>{
-    const id = Number(request.params.id)
-    const person = persons.find((perso)=> perso.id === id)
+//const unknownEndPoint = (request ,response)=>{
+//   response.status(404).send({error:"unknownEndPoint"})
+//}
+//app.use(unknownEndPoint)
 
-    if(person){
-        response.json(person)
-    }else{
-        response.status(404).end()
-    }
+//const errorHandler = (error, request,response,next)=>{
+//    console.error(error.message)
+
+//    if(error.name === 'castError'){
+//       return response.status(400).send({error: "malFormatted id"})
+ //   }
+  //  next(error)
+//}
+//app.use(errorHandler)
+
+
+app.get('/api/persons/:id', (request, response)=>{
+    perso.findById(request.params.id)
+    .then(perso =>{
+        if(perso){
+            response.json(perso)
+        }else{
+            response.status(404).end()
+        }
+    }).catch(error => next(error))        
+    
 })
 
 app.delete('/api/persons/:id', (request, response)=>{
-    const id = Number(request.params.id)
-    console.log(id)
-    persons = persons.filter((perso)=> perso.id !== id)
+    perso.findByIdAndDelete(request.params.id)
+    .then(result => {
+        response.status(204).end()
+    })
+    .catch(error => next(error))
+})
 
-    response.status(204).end()
+app.put('/api/persons/:id', (request, response) =>{
+
+    const body = request.body
+
+    const perso = {
+        name:body.name,
+        number:body.number
+    }
+    perso.findByIdAndUpdate(request.params.id, perso, {new: true})
+    .then(updateNumber =>{
+        response.json(updateNumber)
+    })
+    .catch(error => next(error))
 })
 
 
 
 
-const PORT = process.env.PORT || 3005
+
+const PORT = process.env.PORT
 
 app.listen(PORT, ()=>{
     console.log(`server running on port ${PORT}`)
