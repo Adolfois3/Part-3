@@ -46,19 +46,8 @@ app.get('/api/persons', (request, response)=>{
     })
 })
 
-app.post('/api/persons', (request, response)=>{
+app.post('/api/persons', (request, response, next)=>{
     const body = request.body
-
-    if(!body.name){
-        return response.status(400).json({
-            error: 'name must be unique'
-        })
-    }
-    if(!body.number){
-        return response.status(400).json({
-            error:'number is missing'
-        })
-    }
 
     const personn = new perso({
         name:body.name,
@@ -68,22 +57,26 @@ app.post('/api/persons', (request, response)=>{
     personn.save().then(savedPerso =>{
         response.json(savedPerso)
     })
+    .catch(error => next(error))
 })
 
-//const unknownEndPoint = (request ,response)=>{
-//   response.status(404).send({error:"unknownEndPoint"})
-//}
-//app.use(unknownEndPoint)
+const unknownEndPoint = (request ,response)=>{
+   response.status(404).send({error:"unknownEndPoint"})
+}
 
-//const errorHandler = (error, request,response,next)=>{
-//    console.error(error.message)
 
-//    if(error.name === 'castError'){
-//       return response.status(400).send({error: "malFormatted id"})
- //   }
-  //  next(error)
-//}
-//app.use(errorHandler)
+const errorHandler = (error, request,response,next)=>{
+console.error(error.message)
+
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'malformatted id' })
+  } else if (error.name === 'ValidationError') {
+    return response.status(400).json({ error: error.message })
+  }
+
+  next(error)
+}
+
 
 
 app.get('/api/persons/:id', (request, response)=>{
@@ -101,29 +94,35 @@ app.get('/api/persons/:id', (request, response)=>{
 app.delete('/api/persons/:id', (request, response)=>{
     perso.findByIdAndDelete(request.params.id)
     .then(result => {
-        response.status(204).end()
+        response.status(204).end()  
     })
     .catch(error => next(error))
 })
 
 app.put('/api/persons/:id', (request, response) =>{
+    const {name, number} = request.body
 
-    const body = request.body
+    perso.findByIdAndUpdate(
+        request.params.id,
+    )
+    .then((perso)=>{
+        if(!perso){
+            return response.status(404).end()
+        }
+        perso.name = name,
+        perso.number = number
 
-    const perso = {
-        name:body.name,
-        number:body.number
-    }
-    perso.findByIdAndUpdate(request.params.id, perso, {new: true})
-    .then(updateNumber =>{
-        response.json(updateNumber)
+        return perso.save().then((updatePerso)=>{
+            response.json(updatePerso)
+        })
     })
-    .catch(error => next(error))
+    .catch((error)=> next(error))
 })
 
 
 
-
+app.use(unknownEndPoint)
+app.use(errorHandler)
 
 const PORT = process.env.PORT
 
