@@ -17,7 +17,7 @@ app.use(cors())
 
 
 
-morgan.token('body', (request, response)=> JSON.stringify(request.body))
+morgan.token('body', (request)=> JSON.stringify(request.body))
 
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
@@ -64,7 +64,7 @@ const unknownEndPoint = (request ,response)=>{
    response.status(404).send({error:"unknownEndPoint"})
 }
 
-
+ 
 const errorHandler = (error, request,response,next)=>{
 console.error(error.message)
 
@@ -93,7 +93,7 @@ app.get('/api/persons/:id', (request, response)=>{
 
 app.delete('/api/persons/:id', (request, response)=>{
     perso.findByIdAndDelete(request.params.id)
-    .then(result => {
+    .then(() => {
         response.status(204).end()  
     })
     .catch(error => next(error))
